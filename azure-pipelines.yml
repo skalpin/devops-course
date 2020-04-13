@@ -6,14 +6,51 @@
 trigger:
 - master
 
-pool:
-  vmImage: 'vs2017-win2016'
+stages:
+- stage: 'Build'
+  displayName: 'Build and test the application'
+  jobs:
+  - job: 'Build_and_Test'
+    pool:
+      vmImage: 'vs2017-win2016'
+    variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
 
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+    steps:
+    - task: NuGetToolInstaller@0
+      displayName: 'Use NuGet 4.4.1'
+      inputs:
+        versionSpec: 4.4.1
 
-steps:
-  - template: Templates/template.yml
+    - task: NuGetCommand@2
+      displayName: 'NuGet restore'
+      inputs:
+        restoreSolution: '**\*.sln'
+
+    - task: VSBuild@1
+      displayName: 'Build web app solution'
+      inputs:
+        solution: 'WebApp\**\*.sln'
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+
+    - task: VSBuild@1
+      displayName: 'Build test automation solution'
+      inputs:
+        solution: 'TestAutomation\**\*.sln'
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+
+    - task: VSTest@2
+      displayName: 'Test Assemblies'
+      inputs:
+        testAssemblyVer2: |
+           WebApp**\$(buildConfiguration)\*test*.dll
+           !**\obj\**
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
 
