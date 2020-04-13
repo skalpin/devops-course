@@ -1,0 +1,35 @@
+steps:
+    - task: NuGetToolInstaller@0
+      displayName: 'Use NuGet 4.4.1'
+      inputs:
+        versionSpec: 4.4.1
+steps:
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    restoreSolution: '**\*.sln'
+steps:
+    - task: VSBuild@1
+      displayName: 'Build web app solution'
+      inputs:
+        solution: 'WebApp\**\*.sln'
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+steps:
+    - task: VSBuild@1
+      displayName: 'Build test automation solution'
+      inputs:
+        solution: 'TestAutomation\**\*.sln'
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+steps:
+- task: VSTest@2
+  displayName: 'Test Assemblies'
+  inputs:
+    testAssemblyVer2: |
+     WebApp**\$(BuildConfiguration)\*test*.dll
+     !**\obj\**
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
