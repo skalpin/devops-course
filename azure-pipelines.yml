@@ -15,5 +15,5 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-  -template: Templates/template.yml
+  - template: Templates/template.yml
 
