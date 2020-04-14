@@ -49,6 +49,30 @@ stages:
            !**\obj\**
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
+    - task: CopyFiles@2
+      displayName: 'Copy test automation'
+      inputs:
+        SourceFolder: 'TestAutomation/DemoTests/Tests/bin/$(BuildConfiguration)'
+        Contents: '**\*'
+        TargetFolder: '$(build.artifactstagingdirectory)/Automation'
+    - task: CopyFiles@2
+      displayName: 'Copy Deployment Scripts'
+      inputs:
+        SourceFolder: DeploymentScript
+        Contents: '**\*'
+        TargetFolder: '$(build.artifactstagingdirectory)/DeploymentScripts'
+    - task: PublishSymbols@2
+      displayName: 'Publish symbols path'
+      inputs:
+        SearchPattern: '**\bin\**\*.pdb'
+        PublishSymbols: false
+      continueOnError: true
+    # - task: PublishBuildArtifacts@1
+    #   displayName: 'Publish Artifact'
+    #   inputs:
+    #     PathtoPublish: '$(build.artifactstagingdirectory)'
+    #     ArtifactName: '$(Parameters.ArtifactName)'
+    #   condition: succeededOrFailed()
 - stage: 'Lower'
   displayName: "Deploy to lower environment"
   dependsOn: 'BuildTest'
@@ -67,8 +91,8 @@ stages:
       displayName: 'PowerShell Script'
       inputs:
         targetType: filePath
-        filePath: './$(System.DefaultWorkingDirectory)/_Master-CI/drop/DeploymentScripts/MSDep.ps1'
-        arguments: '-zip ''$(System.DefaultWorkingDirectory)\_Master-CI\drop\TestSite.zip'' -publish ''$(Agent.TempDirectory)\ECSDevOpsLowerskalpin.PublishSettings'''
+        filePath: '$(build.artifactstagingdirectory)/DeploymentScripts/MSDep.ps1'
+        arguments: '-zip ''$(build.artifactstagingdirectory)\TestSite.zip'' -publish ''$(Agent.TempDirectory)\ECSDevOpsLowerskalpin.PublishSettings'''
     - task: VSTest@2
       displayName: 'Test run for Test plans'
       inputs:
@@ -77,7 +101,7 @@ stages:
         testSuite: 3
         testConfiguration: 2
         vsTestVersion: 15.0
-        runSettingsFile: '$(System.DefaultWorkingDirectory)/_Master-CI/drop/Automation/Parallel.RunSettings'
+        runSettingsFile: '$(build.artifactstagingdirectory)/Automation/Parallel.RunSettings'
         overrideTestrunParameters: '-SeleniumMaqs:WebSiteBase $(BaseUrl)'
         runInParallel: false
         runTestsInIsolation: false
