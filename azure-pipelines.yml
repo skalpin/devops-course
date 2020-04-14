@@ -7,7 +7,7 @@ trigger:
 - master
 
 stages:
-- stage: 'Build'
+- stage: 'BuildTest'
   displayName: 'Build and test the application'
   jobs:
   - job: 'Build_and_Test'
@@ -18,18 +18,15 @@ stages:
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
       system.debug: false
-
     steps:
     - task: NuGetToolInstaller@0
       displayName: 'Use NuGet 4.4.1'
       inputs:
         versionSpec: 4.4.1
-
     - task: NuGetCommand@2
       displayName: 'NuGet restore'
       inputs:
         restoreSolution: '**\*.sln'
-
     - task: VSBuild@1
       displayName: 'Build web app solution'
       inputs:
@@ -37,7 +34,6 @@ stages:
         msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
-
     - task: VSBuild@1
       displayName: 'Build test automation solution'
       inputs:
@@ -45,7 +41,6 @@ stages:
         msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
-
     - task: VSTest@2
       displayName: 'Test Assemblies'
       inputs:
@@ -54,4 +49,37 @@ stages:
            !**\obj\**
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
-
+- stage: 'Lower'
+  displayName: "Deploy to lower environment"
+  dependsOn: 'BuildTest'
+  jobs:
+  - job: 'DeployLower'
+    pool:
+      vmImage: 'vs2017-win2016'
+    variables:
+      BaseUrl: 'https://ecsdevopshigherskalpin.azurewebsites.net'
+    steps:
+    - task: DownloadSecureFile@1
+      displayName: 'Download secure file'
+      inputs:
+        secureFile: ECSDevOpsLowerskalpin.PublishSettings
+    - task: PowerShell@2
+      displayName: 'PowerShell Script'
+      inputs:
+        targetType: filePath
+        filePath: './$(System.DefaultWorkingDirectory)/_Master-CI/drop/DeploymentScripts/MSDep.ps1'
+        arguments: '-zip ''$(System.DefaultWorkingDirectory)\_Master-CI\drop\TestSite.zip'' -publish ''$(Agent.TempDirectory)\ECSDevOpsLowerskalpin.PublishSettings'''
+    - task: VSTest@2
+      displayName: 'Test run for Test plans'
+      inputs:
+        testSelector: testPlan
+        testPlan: 1
+        testSuite: 3
+        testConfiguration: 2
+        vsTestVersion: 15.0
+        runSettingsFile: '$(System.DefaultWorkingDirectory)/_Master-CI/drop/Automation/Parallel.RunSettings'
+        overrideTestrunParameters: '-SeleniumMaqs:WebSiteBase $(BaseUrl)'
+        runInParallel: false
+        runTestsInIsolation: false
+        codeCoverageEnabled: false
+      continueOnError: true
