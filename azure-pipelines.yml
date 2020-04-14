@@ -7,10 +7,10 @@ trigger:
 - master
 
 stages:
-- stage: 'BuildTest'
-  displayName: 'Build and test the application'
+- stage: 'Build'
+  displayName: 'Build the application and test assembilies'
   jobs:
-  - job: 'Build_and_Test'
+  - job: 'Build'
     pool:
       vmImage: 'vs2017-win2016'
     variables:
@@ -41,6 +41,18 @@ stages:
         msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
+- stage: 'Test'
+  displayName: 'Test the application'
+  jobs:
+  - job: 'Test'
+    pool:
+      vmImage: 'vs2017-win2016'
+    variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+      system.debug: false
+    steps:
     - task: VSTest@2
       displayName: 'Test Assemblies'
       inputs:
@@ -49,37 +61,3 @@ stages:
            !**\obj\**
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
-- stage: 'Lower'
-  displayName: "Deploy to lower environment"
-  dependsOn: 'BuildTest'
-  jobs:
-  - job: 'DeployLower'
-    pool:
-      vmImage: 'vs2017-win2016'
-    variables:
-      BaseUrl: 'https://ecsdevopshigherskalpin.azurewebsites.net'
-    steps:
-    - task: DownloadSecureFile@1
-      displayName: 'Download secure file'
-      inputs:
-        secureFile: ECSDevOpsLowerskalpin.PublishSettings
-    - task: PowerShell@2
-      displayName: 'PowerShell Script'
-      inputs:
-        targetType: filePath
-        filePath: 'DeploymentScript\MSDep.ps1'
-        arguments: '-zip ''$(build.artifactstagingdirectory)\TestSite.zip'' -publish ''$(Agent.TempDirectory)\ECSDevOpsLowerskalpin.PublishSettings'''
-    - task: VSTest@2
-      displayName: 'Test run for Test plans'
-      inputs:
-        testSelector: testPlan
-        testPlan: 1
-        testSuite: 3
-        testConfiguration: 2
-        vsTestVersion: 15.0
-        runSettingsFile: 'TestAutomation/DemoTests/Tests/bin/$(BuildConfiguration)/Parallel.RunSettings'
-        overrideTestrunParameters: '-SeleniumMaqs:WebSiteBase $(BaseUrl)'
-        runInParallel: false
-        runTestsInIsolation: false
-        codeCoverageEnabled: false
-      continueOnError: true
