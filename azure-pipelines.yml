@@ -17,6 +17,7 @@ stages:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      system.debug: false
 
     steps:
     - task: NuGetToolInstaller@0
@@ -49,7 +50,7 @@ stages:
       displayName: 'Test Assemblies'
       inputs:
         testAssemblyVer2: |
-           WebApp**\$(buildConfiguration)\*test*.dll
+           WebApp\**\$(buildConfiguration)\**\*Test*.dll
            !**\obj\**
         platform: '$(buildPlatform)'
         configuration: '$(buildConfiguration)'
