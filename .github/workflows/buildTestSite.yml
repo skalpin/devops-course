@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: vs2017-win2016
     steps:
     - run: mkdir -p artifactApp
     - run: mkdir -p artifactTests
